@@ -38,21 +38,30 @@ public class Nettoyage {
 		switch (etat) {
 		case SCAN_PALETS:
 			// on ferme les pinces (il faut vérifier si les pinces sont déjà fermées)
-			robot.fermePinces();
+			// robot.fermePinces();
 
 			// on cherches les palets potentiels
 			if (scanPalet() == 0)
 				etat = DIRIGER_VERS_PALET;
+			// Sinon on continue à scanner pour le moment
 			break;
 
 		case DIRIGER_VERS_PALET:
-			dirigerVersPalet();
+			if (dirigerVersPalet() == 0)
+				etat = ATTRAPER_PALET;
+			else
+				etat = SCAN_PALETS;
 			break;
 
 		case ATTRAPER_PALET:
 			if (attrapePalet() == 0) // si on attrape bien un palet, on va le ranger
 				etat = RANGER_PALET_ATTRAPE;
-			else // sinon on cherche un nouveau palet
+			else
+				// A VOIR : //TODO
+				// sinon on verifie très rapidement si jamais un palet a été attrapé par les
+				// pinces
+				// mais n'a pas touché le balai du capteur de toucher
+				//etat = verifAttrapPalet();
 				etat = SCAN_PALETS;
 			break;
 
@@ -76,26 +85,48 @@ public class Nettoyage {
 		// si on traverse ligne blanche, on pose le palet
 	}
 
-	public void dirigerVersPalet() {
+	/**
+	 * Fait bouger le robot en direction du palet potentiel détecté auparavant
+	 * 
+	 * @return 0 si le robot vient de se positionner à 30 cm d'un palet (a priori),
+	 *         1 si on était sur le point de toucher un mur(on a pas trouvé de
+	 *         palet)
+	 * 
+	 */
+	public int dirigerVersPalet() {
 		robot.forward();
 		// mesurer de manière asynchrone la distance courante
 		SampleProvider sampleProvider = capteurs.soundSensor.getDistanceMode();
 
 		// variables pour sauvegarder les mesures
 		float[] sample = new float[sampleProvider.sampleSize()];
-		float previous = 5; // valeur absurde 5m
+		float previous = 10; // valeur absurde 10m
 		float courant;
-		// tant que la distance ne réaugmente pas (cas où on a passé le palet et le mur
-		// derrière alors est mesuré), le robot avance
-		while (robot.isMoving()) {
+		// tant que la distance mesurée ne réaugmente pas (ce serait le cas où on a
+		// passé le palet et le mur
+		// derrière est alors mesuré), le robot avance
+		do {
+			// on mesure la distance
 			sampleProvider.fetchSample(sample, 0);
 			courant = sample[0];
-			if (previous < 0.37 && courant > previous)
+			// on était tres proche de quelquechose (un palet peut être) et cette chose
+			// n'est plus visible
+			if (previous < 0.37 && courant > previous) {
 				robot.stop();
+				// A priori, on est juste devant un palet
+				System.out.println("devant un palet");//
+				return 0;
+			}
 			previous = courant;
 			System.out.println(courant);
-			Delay.msDelay(500);
-		}
+			Delay.msDelay(200);
+			// on arrête la boucle si on va toucher un mur
+		} while (courant > 0.12);
+		robot.stop();
+		// on a loupé le palet
+
+		System.out.println("c'etait un mur");
+		return 1;
 
 		// se recaliber si il faut (si distance mesurée change brusquement hors cas <
 		// 31cm)
@@ -108,20 +139,72 @@ public class Nettoyage {
 	 * est attrapé, renvoie 1 sinon
 	 */
 	public int attrapePalet() {
-		// ouvre pinces
+		System.out.println("attrapePalet()");
+		// on ouvre les pinces pour attraper le palet
 		robot.ouvrePinces();
 
-		// Le robot avance de 30 cm
-		robot.travel(3000);
+		// on avance vers le palet
+		robot.forward();
 
-		// on attrape le palet avec un peu de chance
+		// on mesure de manière asynchrone la distance de l'objet devant le robot
+		SampleProvider sampleProvider = capteurs.soundSensor.getDistanceMode();
+		float[] sample = new float[sampleProvider.sampleSize()];
+		float distanceMesuree = 99; // valeur absurde
+		// on arrête d'essayer d'attraper au bout de 8 secondes ou si on s'apprete à
+		// toucher un mur
+		long beginning = System.currentTimeMillis();
+		while (System.currentTimeMillis() - beginning < 8000 && distanceMesuree > 0.12) {
+			// le senseur a senti quelque chose (un palet normalement)
+			if (capteurs.touchSensor.isPressed()) {
+				robot.stop();
+				robot.fermePinces();
+				System.out.println("attraped"); // TEST
+				return 0;
+			}
+			sampleProvider.fetchSample(sample, 0);
+			distanceMesuree = sample[0];
+		}
+
+		// On abandonne au bout de 8 secondes ou si le robot allait toucher un mur
+		robot.stop();
 		robot.fermePinces();
+		System.out.println("louped"); // TEST
+		return 1;
+	}
 
-		// si le bouton avant est pressé, c'est qu'on a attrapé un palet
-		if (capteurs.touchSensor.isPressed())
-			return 1;
-		else
-			return 0;
+	/**
+	 * Verifie très rapidement si jamais un palet a été attrapé par les pinces mais
+	 * n'a pas touché le balai du capteur de toucher. Réouvre les pinces et avance
+	 * d'un chouia. Si un palet était attrapé, le détecteur de toucher le détecte
+	 * maintenant.
+	 * 
+	 * @return RANGER_PALET_ATTRAPE si il y avait un palet, SCAN_PALETS sinon
+	 */
+	public int verifAttrapPalet() {
+		System.out.println("verifAttrPalet()"); // TEST
+		robot.ouvrePinces();
+		robot.travel(200, true); // on bouge de 2cm
+
+		// on ouvre les pinces et on avance une seconde pour voir si un palet est
+		// détecté
+		long beginning = System.currentTimeMillis();
+		while (System.currentTimeMillis() - beginning < 500) {
+
+			// il y avait bien un palet attrapé
+			if (capteurs.touchSensor.isPressed()) {
+				robot.stop();
+				robot.fermePinces();
+				System.out.println("un palet finalement"); // TEST
+				// on renvoie l'etat suivant
+				return RANGER_PALET_ATTRAPE;
+			}
+		}
+		// Pas de palet détecté :
+		robot.stop();
+		robot.fermePinces();
+		System.out.println("pas de palet"); // TEST
+		// Il faut en chercher un palet
+		return SCAN_PALETS;
 	}
 
 	/**
@@ -205,42 +288,23 @@ public class Nettoyage {
 		else
 			robot.rotate(-360 + degrePalet/* 0 + 2 */);
 
-		// TEST
-		sampleProvider.fetchSample(sample, 0);
-		System.out.println("distance lue : " + sample[0]);
-		Button.ENTER.waitForPressAndRelease();
+		/*
+		 * // TEST sampleProvider.fetchSample(sample, 0);
+		 * System.out.println("distance lue : " + sample[0]);
+		 * Button.ENTER.waitForPressAndRelease();
+		 */
 
 		return 0;
 	}
 
 	public void test() {
 		// Button.ENTER.waitForPressAndRelease();
+		// robot.fermePinces();
+		// robot.ouvrePinces();
 
-		dirigerVersPalet();
-
+		// dirigerVersPalet();
 		// attrapePalet();
-		// ouvre pinces
-		robot.ouvrePinces();
-
-		robot.forward();
-		long beginning = System.currentTimeMillis();
-		boolean attraped = false;
-		// on essaie pendant 7 secondes de capter un palet touché
-		while (System.currentTimeMillis() - beginning > 8000 && !attraped) {
-			if (capteurs.touchSensor.isPressed()) {
-				// on attrape le palet avec un peu de chance
-				robot.stop();
-				robot.fermePinces();
-				attraped = true;
-				System.out.println("attraped");
-			}
-		}
-		if (!attraped) {
-			// Si au bout de 8s le capteur de toucher n'a rien détecté
-			robot.stop();
-			robot.fermePinces();
-			System.out.println("louped");
-		}
+		verifAttrapPalet();
 		Button.ENTER.waitForPressAndRelease();
 
 		/***

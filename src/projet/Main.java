@@ -28,7 +28,7 @@ public class Main {
 		MonPilot cedric = new MonPilot(560, 1045, mLeftMotor, mRightMotor, pinces);
 		// On règle ses vitesses
 		cedric.setAngularSpeed(60); // on set la vitesse de rotation (degre/seconde)
-		cedric.setLinearSpeed(900); // vitesse de déplacement (mm/seconde?)
+		cedric.setLinearSpeed(600); // vitesse de déplacement (mm/seconde?)
 		
 		// On récupère un ultrasonic sensor
 		Port port = LocalEV3.get().getPort("S2");

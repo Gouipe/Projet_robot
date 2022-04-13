@@ -40,10 +40,10 @@ public class MonPilot extends MovePilot {
 	public void fermePinces() {
 		//if (ouvertes) {
 			pinces.backward();
-			Delay.msDelay(6000);
+			Delay.msDelay(1666);
 			pinces.stop();
 		//}
-		ouvertes = true;
+		ouvertes = false;
 	}
 
 	/**
@@ -53,7 +53,7 @@ public class MonPilot extends MovePilot {
 	public void ouvrePinces() {
 		//if (!ouvertes) {
 			pinces.forward();
-			Delay.msDelay(6000);
+			Delay.msDelay(1666);
 			pinces.stop();
 		//}
 		ouvertes = true;

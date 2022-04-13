@@ -18,22 +18,23 @@ import lejos.utility.Delay;
 public class Main {
 
 	public static void main(String[] args) {
-		/********* On instancie un pilot pour piloter projet ****************/
-		
+		/********* On instancie capteurs et moteurs ****************/
+
 		// On récupère les moteurs
 		EV3LargeRegulatedMotor mLeftMotor = new EV3LargeRegulatedMotor(MotorPort.A);
 		EV3LargeRegulatedMotor mRightMotor = new EV3LargeRegulatedMotor(MotorPort.D);
 		EV3MediumRegulatedMotor pinces = new EV3MediumRegulatedMotor(MotorPort.C);
+		pinces.setSpeed(1080);
 		// On instancie le pilot
 		MonPilot cedric = new MonPilot(560, 1045, mLeftMotor, mRightMotor, pinces);
 		// On règle ses vitesses
-		cedric.setAngularSpeed(60); // on set la vitesse de rotation (degre/seconde)
-		cedric.setLinearSpeed(600); // vitesse de déplacement (mm/seconde?)
-		
+		cedric.setAngularSpeed(100); // on set la vitesse de rotation (degre/seconde)
+		cedric.setLinearSpeed(1200); // vitesse de déplacement (mm/seconde?)
+
 		// On récupère un ultrasonic sensor
 		Port port = LocalEV3.get().getPort("S2");
 		EV3UltrasonicSensor soundSensor = new EV3UltrasonicSensor(port);
-		//On récupère un touch sensor
+		// On récupère un touch sensor
 		port = LocalEV3.get().getPort("S1");
 		TouchSensor touchSensor = new TouchSensor(port);
 		// On instancie capteurs
@@ -42,9 +43,10 @@ public class Main {
 		/************************************************************/
 
 		Nettoyage nettoyage = new Nettoyage(cedric, capteurs);
+		nettoyage.attrapePalet();
 		//nettoyage.run();
-		nettoyage.test();
-		
+		//nettoyage.test();
+		//nettoyage.test2();
 	}
 
 }

@@ -25,10 +25,13 @@ public class Nettoyage {
 	final private int DIRIGER_VERS_PALET = 1;
 	final private int ATTRAPER_PALET = 2;
 	final private int RANGER_PALET_ATTRAPE = 3;
+	
+	final private double ANG_SPEED_CHECK = 60.0;
+	final private double ANG_SPEED_REGULAR = 120.0;
 
 	MonPilot robot;
 	Capteurs capteurs;
-	int etat; // Etat courant de l'automate
+	private int etat; // Etat courant de l'automate
 
 	public Nettoyage(MonPilot robot, Capteurs capteurs) {
 		this.robot = robot;
@@ -66,10 +69,10 @@ public class Nettoyage {
 					// sinon on verifie très rapidement si jamais un palet a été attrapé par les
 					// pinces
 					// mais n'a pas touché le balai du capteur de toucher
-					etat = verifAttrapPalet();
+					//etat = verifAttrapPalet();
 
-				// version normale :
-				// etat = SCAN_PALETS;
+					// version normale :
+					etat = SCAN_PALETS;
 				break;
 
 			case RANGER_PALET_ATTRAPE:
@@ -78,7 +81,8 @@ public class Nettoyage {
 				etat = SCAN_PALETS;
 				break;
 			}
-		} while (etat != SCAN_PALETS && etat != RANGER_PALET_ATTRAPE);
+		} while (etat != SCAN_PALETS);
+		Button.ENTER.waitForPressAndRelease();
 	}
 
 	/**
@@ -120,11 +124,12 @@ public class Nettoyage {
 	 */
 	public void rangePalet() {
 		// TODO
-		// on se dirige tout droit tant que la distance mesurée est < 31 cm
+		robot.rotateToGoal();
 
-		// si distance mesurée devient < 31 cm, on tourne de 70 degres
+		// si distance mesurée devient < 31 cm, on tourne de 70 degres ?
 
 		// si on traverse ligne blanche, on pose le palet
+		
 	}
 
 	/**
@@ -163,7 +168,7 @@ public class Nettoyage {
 				return 0;
 			}
 			previous = courant;
-			System.out.println(courant);
+			//System.out.println(courant);
 			//Delay.msDelay(100);
 			// on arrête la boucle si on va toucher un mur
 		} while (courant > 0.23);
@@ -316,6 +321,7 @@ public class Nettoyage {
 		/*************************************************************************************************/
 		double degreParMesure = 360.0 / nbMesures; // degre parcouru entre deux mesures
 		double degrePalet = degreParMesure * quantiemeMesure;
+		/*
 		// TESTS///////
 
 		System.out.println("nbMesures : " + nbMesures);
@@ -329,7 +335,7 @@ public class Nettoyage {
 		System.out.println("quantiemeMesure : " + quantiemeMesure);
 		System.out.println("degre : " + degrePalet);
 		Button.ENTER.waitForPressAndRelease();
-
+		 */
 		// Si aucune mesure min mesurée (que des infinity ou < 31cm)
 		if (quantiemeMesure == -1) {
 			return -1;
@@ -352,19 +358,60 @@ public class Nettoyage {
 		 * Button.ENTER.waitForPressAndRelease();
 		 */
 		
-		//VERIFICATION ROBOT SE TROUVE DEVANT PALET
+		/*********VERIFICATION ROBOT SE TROUVE DEVANT PALET*************/
+		/*
+		//tests//
 		System.out.println("min :" + min);
 		sampleProvider.fetchSample(sample, 0); // on fait une mesure
 		System.out.println("mesuree :"+ sample[0]);
 		Button.ENTER.waitForPressAndRelease();
-		return 0;
+		/////////
+		*/
+		
+		//mesure en continu
+		ArrayList<Float> distances2 = new ArrayList<Float>(); // on récupère les mesures dans une arraylist
+
+		//tourne un peu à droite puis un peu à gauche tant que distance mesurée est différente
+		// de min
+		robot.setAngularSpeed(ANG_SPEED_CHECK);
+		int balayage = 40;
+		int increment = 2;
+		int balayageCourant = 0;
+		while(true) {
+			if (balayageCourant == balayage) {
+				// si on a parcouru les 40 degres du balayage, on change de sens
+				balayage = -balayage;
+				balayageCourant = 0;
+				increment = -increment;
+			}
+			robot.rotate(increment, true);
+			balayageCourant += increment;
+			while (robot.isMoving()) {			
+				sampleProvider.fetchSample(sample, 0);
+				
+				// on a retrouve la distance minimum
+				if(sample[0] > min * 0.99 && sample[0] < min * 1.01) {
+					//on ajoute juste quelques degres, parce qu'en général, le robot
+					// vise le bord
+					/*
+					if(balayage>0)
+						robot.rotate(5);
+					else
+						robot.rotate(-5);
+					*/
+					robot.setAngularSpeed(ANG_SPEED_REGULAR);
+					return 0;
+				}
+			}
+		}
+		/***************************************************************/
 	}
 
 	public void test() {
 		// Button.ENTER.waitForPressAndRelease();
 		//robot.ouvrePinces();
 		//robot.fermePinces();
-		
+		robot.rotate(360);
 
 		//scanPalet();
 		//dirigerVersPalet();

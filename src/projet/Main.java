@@ -28,9 +28,9 @@ public class Main {
 		// On instancie le pilot
 		MonPilot cedric = new MonPilot(560, 1045, mLeftMotor, mRightMotor, pinces);
 		// On règle ses vitesses
-		cedric.setAngularSpeed(100); // on set la vitesse de rotation (degre/seconde)
-		cedric.setLinearSpeed(1200); // vitesse de déplacement (mm/seconde?)
-
+		cedric.setAngularSpeed(120); // on set la vitesse de rotation (degre/seconde)
+		cedric.setLinearSpeed(800); // vitesse de déplacement (mm/seconde?)
+		
 		// On récupère un ultrasonic sensor
 		Port port = LocalEV3.get().getPort("S2");
 		EV3UltrasonicSensor soundSensor = new EV3UltrasonicSensor(port);
@@ -43,9 +43,9 @@ public class Main {
 		/************************************************************/
 
 		Nettoyage nettoyage = new Nettoyage(cedric, capteurs);
-		nettoyage.attrapePalet();
+		
 		//nettoyage.run();
-		//nettoyage.test();
+		nettoyage.test();
 		//nettoyage.test2();
 	}
 

@@ -17,6 +17,8 @@ public class MonPilot extends MovePilot {
 	private boolean ouvertes; 
 						
 	RegulatedMotor pinces;
+	private double angleAbsoluCourant = 0.0;
+
 
 	/**
 	 * @param wheelDiameter
@@ -57,6 +59,33 @@ public class MonPilot extends MovePilot {
 			pinces.stop();
 		//}
 		ouvertes = true;
+	}
+	
+	public void rotate(double angle, boolean immediateReturn) {
+		super.rotate(angle, immediateReturn);
+		angleAbsoluCourant = (angleAbsoluCourant + angle) % 360;
+		System.out.println(angleAbsoluCourant);
+		//Button.ENTER.waitForPressAndRelease();
+	}
+	
+	public void rotate(double angle) {
+		super.rotate(angle);
+		angleAbsoluCourant = (angleAbsoluCourant + angle) % 360;
+		System.out.println(angleAbsoluCourant);
+		//Button.ENTER.waitForPressAndRelease();
+	}
+	
+	public void rotateWhileHoldingPalet(double angle, boolean immediateReturn) {
+		super.rotate(angle, immediateReturn);
+		angleAbsoluCourant = (angle * 0.95 + angleAbsoluCourant) % 360; 
+		//on enlève quelques % de l'angle théorique
+		// car le robot tourne un peu moins que prévu quand il tient un palet
+		System.out.println(angleAbsoluCourant);
+		//Button.ENTER.waitForPressAndRelease();
+	}
+	
+	public void rotateToGoal() {
+		rotateWhileHoldingPalet(-angleAbsoluCourant, true);
 	}
 
 }

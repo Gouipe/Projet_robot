@@ -19,8 +19,8 @@ public class ColorSensor
     	colorSensor = new EV3ColorSensor(port);
     	average = new MeanFilter(colorSensor.getRGBMode(), 1);
 		colorSensor.setFloodlight(Color.WHITE);
-		//System.out.println("Press enter to calibrate path color...");
-		//Button.ENTER.waitForPressAndRelease();
+		System.out.println("Press enter to calibrate path color...");
+		Button.ENTER.waitForPressAndRelease();
 		path_color = new float[average.sampleSize()];
 		average.fetchSample(path_color, 0);
     }

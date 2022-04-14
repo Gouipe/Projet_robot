@@ -51,8 +51,10 @@ public class Main {
 		//nettoyage.attraperPremierPalet();
 		nettoyage.run();
 		//nettoyage.attraperPremierPalet();
-		//nettoyage.test3();
+		//nettoyage.test2();
+		//nettoyage.robot.ouvrePinces();
 		//nettoyage.robot.fermePinces();
+		//nettoyage.scanPaletBis();
 	}
 
 }

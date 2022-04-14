@@ -87,7 +87,7 @@ public class MonPilot extends MovePilot {
 	}
 	
 	public void rotateToGoal() {
-		rotateWhileHoldingPalet(-angleAbsoluCourant, true);
+		rotate(-angleAbsoluCourant);
 	}
 
 }

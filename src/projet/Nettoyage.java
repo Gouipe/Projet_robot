@@ -3,7 +3,10 @@ package projet;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.ListIterator;
+import java.util.Map;
+import java.util.TreeMap;
 
 import lejos.hardware.Button;
 import lejos.hardware.ev3.LocalEV3;
@@ -26,8 +29,8 @@ public class Nettoyage {
 	final private int ATTRAPER_PALET = 2;
 	final private int RANGER_PALET_ATTRAPE = 3;
 	
-	final private double ANG_SPEED_CHECK = 60.0;
-	final private double ANG_SPEED_REGULAR = 120.0;
+	final private double ANG_SPEED_CHECK = 40.0;
+	final private double ANG_SPEED_REGULAR = 80.0;
 
 	MonPilot robot;
 	Capteurs capteurs;
@@ -40,7 +43,8 @@ public class Nettoyage {
 	}
 
 	public void run() {
-		//attraperPremierPalet();
+		etat = SCAN_PALETS ;
+		attraperPremierPalet();
 		//attraperDeuxiemePalet(); a voir
 		do {
 			switch (etat) {
@@ -69,10 +73,10 @@ public class Nettoyage {
 					// sinon on verifie très rapidement si jamais un palet a été attrapé par les
 					// pinces
 					// mais n'a pas touché le balai du capteur de toucher
-					//etat = verifAttrapPalet();
+					etat = verifAttrapPalet();
 
 					// version normale :
-					etat = SCAN_PALETS;
+					//etat = SCAN_PALETS;
 				break;
 
 			case RANGER_PALET_ATTRAPE:
@@ -81,8 +85,7 @@ public class Nettoyage {
 				etat = SCAN_PALETS;
 				break;
 			}
-		} while (etat != SCAN_PALETS);
-		Button.ENTER.waitForPressAndRelease();
+		} while (etat != RANGER_PALET_ATTRAPE);
 	}
 
 	/**
@@ -90,26 +93,48 @@ public class Nettoyage {
 	 * Dépose le premier le palet et s'oriente vers le deuxieme
 	 */
 	public void attraperPremierPalet() {
+		robot.ouvrePinces();
+		
 		// Le robot attend qu'on touche un bouton pour s'activer
+		System.out.println("Appuyez pour commencer");
 		Button.ENTER.waitForPressAndRelease();
-				
-		//attrape le palet le plus proche en face
-		attrapePalet();
-		
-		//TODO
-		//tourner de 45 degre vers sa gauche et avancer un peu
-		
-		//tourner de 45 degres vers la droite
-		
+		// Petit delay pour pas que la pression quand on appuie sur le bouton fasse dévier le robot
+		Delay.msDelay(75);
+		// On avance vers le palet le plus proche en face
+		//robot.forward();
+		// Quand le palet est touché on ferme les pinces...
+		//while (!capteurs.touchSensor.isPressed()) {}
+		robot.travel(4500);
+		/*
+		// ... de manière asynchrone...
+		FermePincesAsynch t = new FermePincesAsynch(robot);
+		t.start();
+		*/
+		robot.stop();
+		// ... ou synchrone.
+		robot.fermePinces();
+
+		//tourne vers sa gauche et avance un peu
+		//robot.arc(2200, 70);
+		robot.rotate(45);
+		robot.travel(3100);
+		//tourne vers la droite et avance un peu
+		robot.rotate(-45);
 		//avancer jusqu'à traverser ligne blanche
-		
+		robot.forward();
+		while(!capteurs.ligneBlancheDetectee()) {}
+
+		robot.stop();
 		//déposer palet
-		
-		//s'orienter vers le deuxième palet (le plus proche)
+		robot.ouvrePinces();
+		//recule de 15cm
+		robot.travel(-1500);
+		//ferme pinces ?
+		robot.fermePinces();
 	}
 	
 	public void attraperDeuxiemePalet() {
-		attrapePalet();
+		//s'oriente vers le premier
 		
 		//s'oriente de ~150 degres vers la gauche
 		
@@ -125,7 +150,12 @@ public class Nettoyage {
 	public void rangePalet() {
 		// TODO
 		robot.rotateToGoal();
-
+		robot.forward();
+		while(!capteurs.ligneBlancheDetectee()) {}
+		robot.stop();
+		robot.ouvrePinces();
+		//recule de 20cm
+		robot.travel(-2000);
 		// si distance mesurée devient < 31 cm, on tourne de 70 degres ?
 
 		// si on traverse ligne blanche, on pose le palet
@@ -158,20 +188,20 @@ public class Nettoyage {
 			courant = sample[0];
 			// on était tres proche de quelquechose (un palet peut être) et cette chose
 			// n'est plus visible et courrant n'est pas infinity
-			if (previous < 0.37 && courant / previous > 1.6 && !(courant > 2.3)) {
+			if (previous < 0.37 && courant / previous > 1.6 /* && !(courant > 2.3)*/) {
 				robot.stop();
 				// A priori, on est juste devant un palet
 				System.out.println("devant un palet");//
-				System.out.println("courant : " + courant);
-				System.out.println("previous : " + previous);
-				System.out.println("pre/cour:" + courant / previous);
+				//System.out.println("courant : " + courant);
+				//System.out.println("previous : " + previous);
+				//System.out.println("pre/cour:" + courant / previous);
 				return 0;
 			}
 			previous = courant;
 			//System.out.println(courant);
 			//Delay.msDelay(100);
 			// on arrête la boucle si on va toucher un mur
-		} while (courant > 0.23);
+		} while (courant > 0.27);
 		robot.stop();
 		// on a loupé le palet
 
@@ -184,7 +214,8 @@ public class Nettoyage {
 	}
 
 	/**
-	 * Attrape un palet. A utiliser quand le palet n'est plus détecté alors qu'on
+	 * Attrape un palet
+	 * A utiliser quand le palet n'est plus détecté alors qu'on
 	 * avance vers lui, le robot est alors à moins de 31 cm. Renvoie 0 si un palet
 	 * est attrapé, renvoie 1 sinon
 	 */
@@ -209,6 +240,7 @@ public class Nettoyage {
 				robot.stop();
 				robot.fermePinces();
 				System.out.println("attraped"); // TEST
+				robot.rotateToGoal();
 				return 0;
 			}
 			sampleProvider.fetchSample(sample, 0);
@@ -266,22 +298,9 @@ public class Nettoyage {
 		
 		SampleProvider sampleProvider = capteurs.soundSensor.getDistanceMode();
 
-		/*
-		 * robot tourne sur lui meme sur 360 degres et récupère tout du long les 
-		 * mesures dans l'arraylist distances 
-		 *
-		 */
+		/********************** PRISE MESURES **************************/
 		
-		/*int nbMesures = 0; ArrayList<Float>
-		 * distances = new ArrayList<Float>(); lib.rotate(360, true); while
-		 * (lib.isMoving()) { float[] sample = new float[sampleProvider.sampleSize()];
-		 * sampleProvider.fetchSample(sample, 0); distances.add(sample[0]); if
-		 * (nbMesures % 1000 == 0) System.out.println(sample[0]); nbMesures++; }
-		 * 
-		 */
-
-		// Autre version de prises de mesure. On prend une mesure par degre en deleyant
-		// chaque mesure
+		// On prend une mesure par degre en deleyant chaque mesure
 		// en fonction de la vitesse de rotation
 		int nbMesures = 0; // le nombre de mesures ne vaudra pas exactement 360
 		ArrayList<Float> distances = new ArrayList<Float>(); // on récupère les mesures dans une arraylist
@@ -301,96 +320,115 @@ public class Nettoyage {
 			// mesures voules
 			Delay.msDelay(1000 * 360 / ((int) robot.getAngularSpeed()) / 360);
 		}
-
-		/***
-		 * On récupère dans la variable min la plus petite distance qui peut
-		 * correspondre à un palet
-		 ****/
-		float min = (float) 5.0;// initialisation
-		int quantiemeMesure = -1; // ordre de la mesure
-		float courant;
+		/****************************************************************/
+		
+		/*********** RECUPERATION MINIMUM/VALEUR INTERESSANTE **********************/
+		
+		// On récupère dans la variable min la plus petite distance qui peut
+		// correspondre à un palet
+		 
+		float min = (float) 999.0; // Initialisation du min avec valeur absurde.
+		int quantiemeMesure = -1; // Ordre de la mesure, valeur absurde au depart
+		
+		//Liste des min intéressants pour ne garder que le plus petit par la suite
+		TreeMap<Float, Integer> interessantsList = new TreeMap<Float, Integer>();
+		float minInteressant = (float)999.0; // Pareil pour minInteressant...
+		int quantiemeMesureInteressante = -1; // ... et son ordre de mesure.
+		
+		float courant; // Mesure courante dans le parcours de l'array list
+		float previous = (float) 0.0; // Mesure précedente
 		for (int i = 0; i < distances.size(); i++) {
 			courant = distances.get(i);
-			if (courant < min && courant > DISTANCE_MIN_PALET) { // si courant est une distance qui peut correspondre à
-																	// un
-																	// palet
+			// Si courant est une distance qui peut correspondre à un palet
+			if (courant < min && courant > DISTANCE_MIN_PALET) { 												
 				min = courant;
 				quantiemeMesure = i; // l'index corresond au nombre de mesures / à la combientieme mesure
 			}
+			// Si la mesure a diminué de 15cm ou plus 
+			if (i > 0 && previous - courant > 0.30 && courant != 2.5 && previous != 2.5
+					&& distances.get(i+1) / courant > 0.97 && distances.get(i+1) / courant < 1.03) {
+				// on "initialise" minInteressant et son index/degre
+				interessantsList.put(courant, i);
+				System.out.println("courant :" + courant);
+				System.out.println("previous :" + previous);
+				Button.ENTER.waitForPressAndRelease();
+			}
+			previous = courant;
 		}
-		/*************************************************************************************************/
-		double degreParMesure = 360.0 / nbMesures; // degre parcouru entre deux mesures
-		double degrePalet = degreParMesure * quantiemeMesure;
-		/*
-		// TESTS///////
-
-		System.out.println("nbMesures : " + nbMesures);
-		// System.out.println("degreParMesure : " + degreParMesure);
-		Button.ENTER.waitForPressAndRelease();
-
-		// projet rotate vers la direction qui correpond à la distance min
-		System.out.println("min : " + min);
-		Button.ENTER.waitForPressAndRelease();
-		System.out.println("degreParMesure : " + degreParMesure);
-		System.out.println("quantiemeMesure : " + quantiemeMesure);
-		System.out.println("degre : " + degrePalet);
-		Button.ENTER.waitForPressAndRelease();
-		 */
+		
+		//RECUPERATION DU MIN INTERESSANT
+		minInteressant = interessantsList.firstKey();
+		quantiemeMesureInteressante = interessantsList.firstEntry().getValue();
+		
+		/***************************************************************************/
+		
+		/****************** ORIENTATION VERS PALET POTENTIEL ************************/
+		
+		// Degres parcourus entre deux mesures
+		double degreParMesure = 360.0 / nbMesures;
+		// Degre correspondant au palet
+		double degrePalet;
+		
+		//Si on a détecté une distance intéressante
+		if (!interessantsList.isEmpty()) {
+			System.out.println("Min interessant : " +minInteressant); //TEST
+			degrePalet = degreParMesure * quantiemeMesureInteressante ; 
+		}
+		else {
+			System.out.println("min normal"); //TEST
+			degrePalet = degreParMesure * quantiemeMesure ; 
+		}
+		// On rajoute un buffer de quelques degres 
+		//car le capteur le voit vant d'être centré sur le palet
+		degrePalet = degrePalet + 7;
+		
 		// Si aucune mesure min mesurée (que des infinity ou < 31cm)
 		if (quantiemeMesure == -1) {
-			return -1;
+			return 1;
 		}
-		// Sinon
-		//plus on fait de mesures, plus il manque des degres j'ai l'impression. 
-		// on multiplie donc le nombre de degres par un buffer
-		float buffDegrees = (float) 1;
+		// Sinon :
+		/*plus on fait de mesures, plus il manque des degres j'ai l'impression. 
+		On multiplie donc le nombre de degres par un buffer
+		float buffDegrees = (float) 1; */
+		
 		// (degre entre deux mesures) * nbmesures => degre vers distance min
-		if (degrePalet < 180)
-			robot.rotate(degrePalet * buffDegrees); // on rajoute quelque degres pour ne pas viser le bord
-												// du palet mais son centre (min correpond bord du palet j'ai
-												// l'impression)
+		if (degrePalet < 180)		
+			robot.rotate(degrePalet); 											
 		else
-			robot.rotate(-360 + degrePalet * buffDegrees);
+			robot.rotate(-360 + degrePalet);
 
-		/*
-		 * // TEST sampleProvider.fetchSample(sample, 0);
-		 * System.out.println("distance lue : " + sample[0]);
-		 * Button.ENTER.waitForPressAndRelease();
-		 */
+		/*************************************************************************/
 		
 		/*********VERIFICATION ROBOT SE TROUVE DEVANT PALET*************/
-		/*
-		//tests//
-		System.out.println("min :" + min);
-		sampleProvider.fetchSample(sample, 0); // on fait une mesure
-		System.out.println("mesuree :"+ sample[0]);
-		Button.ENTER.waitForPressAndRelease();
-		/////////
-		*/
+		sampleProvider.fetchSample(sample, 0);
+		if(sample[0] > min * 0.97 && sample[0] < min * 1.03) 
+			return 0;
 		
-		//mesure en continu
-		ArrayList<Float> distances2 = new ArrayList<Float>(); // on récupère les mesures dans une arraylist
-
-		//tourne un peu à droite puis un peu à gauche tant que distance mesurée est différente
-		// de min
+		//mesures en continu
 		robot.setAngularSpeed(ANG_SPEED_CHECK);
-		int balayage = 40;
-		int increment = 2;
+		int balayage = 50;
+		int increment = 5;
 		int balayageCourant = 0;
 		while(true) {
 			if (balayageCourant == balayage) {
+				if(balayageCourant < 0) {
+					robot.setAngularSpeed(ANG_SPEED_REGULAR);
+					return 1;
+				}
 				// si on a parcouru les 40 degres du balayage, on change de sens
 				balayage = -balayage;
 				balayageCourant = 0;
 				increment = -increment;
 			}
+			//tourne un peu à droite puis un peu à gauche tant que distance mesurée est différente
+			// de min
 			robot.rotate(increment, true);
 			balayageCourant += increment;
 			while (robot.isMoving()) {			
 				sampleProvider.fetchSample(sample, 0);
 				
 				// on a retrouve la distance minimum
-				if(sample[0] > min * 0.99 && sample[0] < min * 1.01) {
+				if(sample[0] > min * 0.9 && sample[0] < min * 1.1) {
 					//on ajoute juste quelques degres, parce qu'en général, le robot
 					// vise le bord
 					/*
@@ -404,9 +442,8 @@ public class Nettoyage {
 				}
 			}
 		}
-		/***************************************************************/
 	}
-
+	
 	public void test() {
 		// Button.ENTER.waitForPressAndRelease();
 		//robot.ouvrePinces();
@@ -453,4 +490,35 @@ public class Nettoyage {
 		
 	}
 
+	public void test3() {
+		/*
+		robot.ouvrePinces();
+		robot.forward();
+		while (!capteurs.touchSensor.isPressed()) {}
+		FermePincesAsynch t = new FermePincesAsynch(robot);
+		t.start();
+		robot.arc(1500, 70);
+		robot.arc(-1500, 70);
+		robot.forward();
+		*/
+		//robot.ouvrePinces();
+		robot.fermePinces();
+		/*
+		for (int i = 0 ; i < 10 ; i++) {
+			System.out.println(capteurs.ligneBlancheDetectee());
+			Button.ENTER.waitForPressAndRelease();
+		}
+		*/
+		/*
+		SampleProvider sampleProvider = capteurs.soundSensor.getDistanceMode();
+		float[] sample = new float[1];
+		for (int i = 1 ; i <= 300 ; i ++) {
+			sampleProvider.fetchSample(sample, 0); // on fait une mesure
+			System.out.println(sample[0]);
+			robot.rotate(1);
+			if (i % 7 == 0)
+				Button.ENTER.waitForPressAndRelease();
+		}
+		*/
+	}
 }

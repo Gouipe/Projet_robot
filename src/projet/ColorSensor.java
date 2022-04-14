@@ -11,7 +11,7 @@ public class ColorSensor
 {
     private static float[] path_color;
     private static SampleProvider average;
-    private static EV3ColorSensor colorSensor;
+    static EV3ColorSensor colorSensor;
     private final static double ERROR = 0.01;
 
     public ColorSensor(Port port)

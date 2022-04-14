@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.ListIterator;
 
 import lejos.hardware.Button;
+import lejos.hardware.motor.EV3MediumRegulatedMotor;
 import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.robotics.RegulatedMotor;
 import lejos.robotics.SampleProvider;
@@ -16,7 +17,7 @@ public class MonPilot extends MovePilot {
 	// sécurité supplémentaire, pour ne pas appeler la même méthode 2 fois de suite
 	private boolean ouvertes; 
 						
-	RegulatedMotor pinces;
+	EV3MediumRegulatedMotor pinces;
 	private double angleAbsoluCourant = 0.0;
 
 
@@ -29,7 +30,7 @@ public class MonPilot extends MovePilot {
 	 *                      être fermées à l'instanciation.
 	 */
 	public MonPilot(double wheelDiameter, double trackWidth, RegulatedMotor leftMotor, RegulatedMotor rightMotor,
-			RegulatedMotor pinces) {
+			EV3MediumRegulatedMotor pinces) {
 		super(wheelDiameter, trackWidth, leftMotor, rightMotor);
 		this.pinces = pinces;
 		ouvertes = false; // pinces doivent être fermées au début
@@ -42,7 +43,7 @@ public class MonPilot extends MovePilot {
 	public void fermePinces() {
 		//if (ouvertes) {
 			pinces.backward();
-			Delay.msDelay(1666);
+			Delay.msDelay(2000); 
 			pinces.stop();
 		//}
 		ouvertes = false;
@@ -55,32 +56,33 @@ public class MonPilot extends MovePilot {
 	public void ouvrePinces() {
 		//if (!ouvertes) {
 			pinces.forward();
-			Delay.msDelay(1666);
+			Delay.msDelay(2000);
 			pinces.stop();
 		//}
 		ouvertes = true;
 	}
 	
+	/*
 	public void rotate(double angle, boolean immediateReturn) {
 		super.rotate(angle, immediateReturn);
 		angleAbsoluCourant = (angleAbsoluCourant + angle) % 360;
-		System.out.println(angleAbsoluCourant);
+		System.out.println("rotate1:" + angleAbsoluCourant);
 		//Button.ENTER.waitForPressAndRelease();
 	}
+	*/
 	
 	public void rotate(double angle) {
 		super.rotate(angle);
 		angleAbsoluCourant = (angleAbsoluCourant + angle) % 360;
-		System.out.println(angleAbsoluCourant);
 		//Button.ENTER.waitForPressAndRelease();
 	}
+	
 	
 	public void rotateWhileHoldingPalet(double angle, boolean immediateReturn) {
 		super.rotate(angle, immediateReturn);
 		angleAbsoluCourant = (angle * 0.95 + angleAbsoluCourant) % 360; 
 		//on enlève quelques % de l'angle théorique
 		// car le robot tourne un peu moins que prévu quand il tient un palet
-		System.out.println(angleAbsoluCourant);
 		//Button.ENTER.waitForPressAndRelease();
 	}
 	

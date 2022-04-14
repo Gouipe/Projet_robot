@@ -48,10 +48,11 @@ public class Main {
 		Nettoyage nettoyage = new Nettoyage(cedric, capteurs);
 		
 		
-		nettoyage.attraperPremierPalet();
-		//nettoyage.run();
+		//nettoyage.attraperPremierPalet();
+		nettoyage.run();
 		//nettoyage.attraperPremierPalet();
 		//nettoyage.test3();
+		//nettoyage.robot.fermePinces();
 	}
 
 }

@@ -45,6 +45,7 @@ public class Nettoyage {
 	public void run() {
 		etat = SCAN_PALETS ;
 		attraperPremierPalet();
+		seReplace();
 		//attraperDeuxiemePalet(); a voir
 		do {
 			switch (etat) {
@@ -61,8 +62,10 @@ public class Nettoyage {
 			case DIRIGER_VERS_PALET:
 				if (dirigerVersPalet() == 0)
 					etat = ATTRAPER_PALET;
-				else
+				else {
+					seReplace();
 					etat = SCAN_PALETS;
+				}
 				break;
 
 			case ATTRAPER_PALET:
@@ -81,6 +84,7 @@ public class Nettoyage {
 
 			case RANGER_PALET_ATTRAPE:
 				rangePalet();
+				seReplace();
 				// une fois que le palet est posé, on cherche un nouveau palet
 				etat = SCAN_PALETS;
 				break;
@@ -131,6 +135,15 @@ public class Nettoyage {
 		robot.travel(-1500);
 		//ferme pinces ?
 		robot.fermePinces();
+		
+		//se replace ? ou attraper deuxieme palet ?
+	}
+	
+	public void seReplace() {
+		//On essaie de se replacer au centre du terrain
+		robot.travel(-2000);
+		robot.rotate(180);
+		robot.travel(2000);
 	}
 	
 	public void attraperDeuxiemePalet() {
@@ -201,7 +214,7 @@ public class Nettoyage {
 			//System.out.println(courant);
 			//Delay.msDelay(100);
 			// on arrête la boucle si on va toucher un mur
-		} while (courant > 0.27);
+		} while (courant > 0.28);
 		robot.stop();
 		// on a loupé le palet
 
@@ -319,6 +332,8 @@ public class Nettoyage {
 			// <=> (nombre de degres parcourus / vitesse de rotation) en ms / nombre de
 			// mesures voules
 			Delay.msDelay(1000 * 360 / ((int) robot.getAngularSpeed()) / 360);
+			if (sample[0] < 0.40)
+				System.out.println(sample[0]);
 		}
 		/****************************************************************/
 		
@@ -346,12 +361,25 @@ public class Nettoyage {
 			}
 			// Si la mesure a diminué de 15cm ou plus 
 			if (i > 0 && previous - courant > 0.30 && courant != 2.5 && previous != 2.5
-					&& distances.get(i+1) / courant > 0.97 && distances.get(i+1) / courant < 1.03) {
+					&& distances.get(i+1) / courant > 0.97 && distances.get(i+1) / courant < 1.03
+					/*&& distances.get((i + 50) % nbMesures) > 0.29 && distances.get((i + 50) % nbMesures) > 0.29*/) {
 				// on "initialise" minInteressant et son index/degre
-				interessantsList.put(courant, i);
-				System.out.println("courant :" + courant);
-				System.out.println("previous :" + previous);
-				Button.ENTER.waitForPressAndRelease();
+				//Si une des valeurs entre les 30 dernieres et les 30 suivantes est inférieure
+				// à 30 cm (c'est un mur)
+				boolean mur = false;
+				for (int j = -25 ; j < 25 && !mur; j++) {
+					if (distances.get(i % distances.size()) < 0.30) {
+						mur = true;
+					}
+				}
+				if(!mur) {
+					interessantsList.put(courant, i);
+					//System.out.println("courant :" + courant);
+					//System.out.println("previous :" + previous);
+					//System.out.println("degre/ind :"+i);
+					//Button.ENTER.waitForPressAndRelease();
+					//Button.ENTER.waitForPressAndRelease();
+				}
 			}
 			previous = courant;
 		}
@@ -359,6 +387,7 @@ public class Nettoyage {
 		//RECUPERATION DU MIN INTERESSANT
 		minInteressant = interessantsList.firstKey();
 		quantiemeMesureInteressante = interessantsList.firstEntry().getValue();
+		
 		
 		/***************************************************************************/
 		
@@ -371,12 +400,16 @@ public class Nettoyage {
 		
 		//Si on a détecté une distance intéressante
 		if (!interessantsList.isEmpty()) {
-			System.out.println("Min interessant : " +minInteressant); //TEST
 			degrePalet = degreParMesure * quantiemeMesureInteressante ; 
+			System.out.println("Min interessant : " +minInteressant); //TEST
+			System.out.println("degre interessant :"+degrePalet);
+			Button.ENTER.waitForPressAndRelease(); 
 		}
 		else {
-			System.out.println("min normal"); //TEST
 			degrePalet = degreParMesure * quantiemeMesure ; 
+			System.out.println("min normal:" + min); //TEST
+			System.out.println("degre:" + degrePalet);
+			Button.ENTER.waitForPressAndRelease();
 		}
 		// On rajoute un buffer de quelques degres 
 		//car le capteur le voit vant d'être centré sur le palet
@@ -428,7 +461,7 @@ public class Nettoyage {
 				sampleProvider.fetchSample(sample, 0);
 				
 				// on a retrouve la distance minimum
-				if(sample[0] > min * 0.9 && sample[0] < min * 1.1) {
+				if(sample[0] > minInteressant * 0.9 && sample[0] < minInteressant * 1.1) {
 					//on ajoute juste quelques degres, parce qu'en général, le robot
 					// vise le bord
 					/*
@@ -503,6 +536,8 @@ public class Nettoyage {
 		*/
 		//robot.ouvrePinces();
 		robot.fermePinces();
+
+		
 		/*
 		for (int i = 0 ; i < 10 ; i++) {
 			System.out.println(capteurs.ligneBlancheDetectee());

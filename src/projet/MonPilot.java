@@ -13,66 +13,42 @@ import lejos.utility.Delay;
 
 public class MonPilot extends MovePilot {
 
-	// indique si les pinces sont ouvertes ou fermées. C'est une simple
-	// sécurité supplémentaire, pour ne pas appeler la même méthode 2 fois de suite
-	private boolean ouvertes; 
-						
 	EV3MediumRegulatedMotor pinces;
-	private double angleAbsoluCourant = 0.0;
-
+	double angleAbsoluCourant = 0.0;
 
 	/**
 	 * @param wheelDiameter
 	 * @param trackWidth
 	 * @param leftMotor
 	 * @param rightMotor
-	 * @param pinces        Crée un pilote pour un robot avec pinces qui doivent
-	 *                      être fermées à l'instanciation.
+	 * @param pinces        Crée un pilote pour un robot avec pinces
 	 */
 	public MonPilot(double wheelDiameter, double trackWidth, RegulatedMotor leftMotor, RegulatedMotor rightMotor,
 			EV3MediumRegulatedMotor pinces) {
 		super(wheelDiameter, trackWidth, leftMotor, rightMotor);
 		this.pinces = pinces;
-		ouvertes = false; // pinces doivent être fermées au début
 	}
 
 	/**
-	 * Verifie si les pinces sont ouvertes, auquel cas ferme les pinces et change
-	 * l'attribut ouvertes
+	 * Ferme les pinces
 	 */
 	public void fermePinces() {
-		//if (ouvertes) {
-			pinces.backward();
-			Delay.msDelay(2000); 
-			pinces.stop();
-		//}
-		ouvertes = false;
+		pinces.backward();
+		Delay.msDelay(1000); 
+		pinces.stop();
 	}
 
 	/**
-	 * Verifie si les pinces sont fermées, auquel cas ouvre les pinces et change
-	 * etatPinces.
+	 *Ouvre les pinces
 	 */
 	public void ouvrePinces() {
-		//if (!ouvertes) {
-			pinces.forward();
-			Delay.msDelay(2000);
-			pinces.stop();
-		//}
-		ouvertes = true;
+		pinces.forward();
+		Delay.msDelay(1000);
+		pinces.stop();
 	}
 	
-	/*
 	public void rotate(double angle, boolean immediateReturn) {
 		super.rotate(angle, immediateReturn);
-		angleAbsoluCourant = (angleAbsoluCourant + angle) % 360;
-		System.out.println("rotate1:" + angleAbsoluCourant);
-		//Button.ENTER.waitForPressAndRelease();
-	}
-	*/
-	
-	public void rotate(double angle) {
-		super.rotate(angle);
 		angleAbsoluCourant = (angleAbsoluCourant + angle) % 360;
 		//Button.ENTER.waitForPressAndRelease();
 	}
@@ -87,7 +63,11 @@ public class MonPilot extends MovePilot {
 	}
 	
 	public void rotateToGoal() {
-		rotate(-angleAbsoluCourant);
+		System.out.println("rotate to goal");
+		if (angleAbsoluCourant < 180)
+			rotate(-angleAbsoluCourant, false);
+		else
+			rotate(- angleAbsoluCourant + 360, false);
 	}
 
 }

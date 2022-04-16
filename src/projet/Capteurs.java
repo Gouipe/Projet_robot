@@ -12,7 +12,6 @@ import lejos.robotics.Color;
 import lejos.robotics.SampleProvider;
 import lejos.robotics.filter.MeanFilter;
 import lejos.utility.Delay;
-import lib.TestColor;
 
 public class Capteurs {
 	
@@ -33,8 +32,6 @@ public class Capteurs {
 		this.soundSensor = soundSensor;
 		this.touchSensor = touchSensor;
 	}
-	
-	
 	
 	// les methodes
 	public boolean aTraverserLigneBlanche(){
